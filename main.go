@@ -200,7 +200,7 @@ func init() {
 		panic(fmt.Sprintf("Error loading .env file : %s", err))
 	}
 
-	os.Setenv("GIN_MODE", "release") // for gin
+	os.Setenv("GIN_MODE", "release") // for gin release mode
 
 	HostPort = os.Getenv("SERVER")
 	fmt.Printf("INIT %s\n", HostPort)
@@ -222,12 +222,11 @@ func init() {
 		panic(fmt.Sprintf("mysql Register Database Fail : %s", err))
 	}
 
-	orm.RegisterModel(&Item{})            // reg model and insert test items
+	orm.RegisterModel(&Item{})            // reg model
 	orm.RunSyncdb("default", false, true) // create table
 
-	insertTestItem()
+	insertTestItem() // insert test items to DB
 
-	// start gin , listen and serve on 0.0.0.0:8080
 	gin.SetMode(gin.ReleaseMode)
 	ser := gin.New()
 	ser.
@@ -261,7 +260,7 @@ func init() {
 			id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 			req := IDQueryRequest{
 				ReqID: id,
-				OutID: make(chan int64, 2), // must be 2 , one for result , another one for safety ("done") close block status
+				OutID: make(chan int64, 2), // must be 2 , one for result , one for "done" => safety close block
 			}
 			IDQueue <- &req
 			c.JSON(http.StatusOK, <-req.OutID) // use block to wait result
@@ -269,7 +268,7 @@ func init() {
 		GET("/get_aggregate_serial/:serial", func(c *gin.Context) {
 			req := SerialQueryRequest{
 				ReqSerial: c.Param("serial"),
-				OutSerial: make(chan string, 2), // must be 2 , one for result , another one for safety ("done") close block status
+				OutSerial: make(chan string, 2), // must be 2 , one for result , one for "done" => safety close block
 			}
 			SerialQueue <- &req
 			intResult, _ := strconv.ParseInt(<-req.OutSerial, 10, 64) // use block to wait result
@@ -317,12 +316,12 @@ func main() {
 		case "getSerial":
 			testFunc = getSerial
 		case "getAggregateID":
-			testFunc = getAggregateID
+			testFunc = getAggregateID // test aggregate way with index
 		case "getAggregateSerial":
-			testFunc = getAggregateSerial
+			testFunc = getAggregateSerial // test aggregate way without index
 		}
 
-		// test aggregate way without index
+		
 		ansResult, testResult, now = 0, 0, time.Now().UnixMilli()
 		for id = 1; id < TestDataPerTest; id++ {
 			wg.Add(1)
