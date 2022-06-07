@@ -88,7 +88,7 @@ func workerID() {
 		pack := map[int64][]*IDQueryRequest{}
 		var err error
 		func() {
-			// must be done
+			// must be "done"
 			defer func() {
 				for _, items := range pack {
 					for _, item := range items {
@@ -142,7 +142,7 @@ func workerSerial() {
 		pack := map[string][]*SerialQueryRequest{}
 		var err error
 		func() {
-			// must be done
+			// must be "done"
 			defer func() {
 				for _, items := range pack {
 					for _, item := range items {
@@ -261,18 +261,18 @@ func init() {
 			id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 			req := IDQueryRequest{
 				ReqID: id,
-				OutID: make(chan int64, 2),
+				OutID: make(chan int64, 2), // must be 2 , one for result , another one for safety ("done") close block status
 			}
 			IDQueue <- &req
-			c.JSON(http.StatusOK, <-req.OutID)
+			c.JSON(http.StatusOK, <-req.OutID) // use block to wait result
 		}).
 		GET("/get_aggregate_serial/:serial", func(c *gin.Context) {
 			req := SerialQueryRequest{
 				ReqSerial: c.Param("serial"),
-				OutSerial: make(chan string, 2),
+				OutSerial: make(chan string, 2), // must be 2 , one for result , another one for safety ("done") close block status
 			}
 			SerialQueue <- &req
-			intResult, _ := strconv.ParseInt(<-req.OutSerial, 10, 64)
+			intResult, _ := strconv.ParseInt(<-req.OutSerial, 10, 64) // use block to wait result
 			c.JSON(http.StatusOK, intResult)
 		})
 
@@ -339,13 +339,6 @@ func main() {
 		wg.Wait()
 		cost = time.Now().UnixMilli() - now
 		fmt.Printf("%s : ans(%d) : test(%d) : match?(%t) : cost(%d)\n", testCase, ansResult, testResult, ansResult == testResult, cost)
-
-		switch testCase {
-		case "getID":
-		case "getSerial":
-		case "getAggregateID":
-		case "getAggregateSerial":
-		}
 	}
 
 	fmt.Println("finished :)")
